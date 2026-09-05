@@ -1,0 +1,123 @@
+schema_version: '0.2'
+
+component:
+  type: application
+  id: goreecloud-home
+  product_name: GoreeCloud Home
+  repository: GoreeCloud/goreecloud-home
+
+lifecycle: development
+version: 0.1.0-dev.1
+
+supported_platforms:
+  - linux
+
+api:
+  versions:
+    - v1
+  endpoints:
+    - name: liveness
+      url: /livez
+      purpose: Report Home Core process liveness without disclosing household state.
+    - name: readiness
+      url: /readyz
+      purpose: Report bounded local journal readiness without exposing household data.
+    - name: service-status
+      url: /api/v1/status
+      purpose: Report bounded product, lifecycle and aggregate Home Core counts.
+
+platform_systems:
+  manager:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md]
+    notes: Home exposes bounded health and status surfaces for future Manager consumption, but no Manager registration or acceptance exists.
+  privacy_shield:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md, docs/privacy.md]
+    notes: Local-first privacy boundaries and future retention requirements are defined, but Privacy Shield enforcement and acceptance are not implemented.
+  wardveil_security:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md, docs/security.md]
+    notes: The Development server is loopback-only by default and exposes no control write API, but Wardveil device trust, privileged-action, secret and risk controls are not integrated.
+  everkeep:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md, docs/recovery.md]
+    notes: Home requires configuration, automation, selected history, export and restore protection, but no Everkeep runtime integration or recovery acceptance exists.
+  glaze_ui:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md, BRANDING.md]
+    notes: No Home client UI exists yet; Glaze UI 1.1.0 is the current required consumer baseline but application-specific conformance has not been implemented or accepted.
+  mesh:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md, docs/architecture.md]
+    notes: Cross-product discovery and events are planned, but Home Core deliberately retains an independent durable local journal and no Mesh runtime integration exists.
+    capabilities: []
+    dependencies: []
+    published_events: []
+    consumed_events: []
+  identity:
+    result: applicable-blocked
+    version: null
+    evidence: [SPECIFICATIONS.md, docs/platform-integration-status.md, docs/security.md, docs/privacy.md]
+    notes: Household identities, guests, sessions, roles and capability-scoped authorization require GoreeCloud Identity, but no runtime integration or acceptance exists.
+
+health:
+  health_endpoint: /livez
+  readiness_endpoint: /readyz
+
+continuity:
+  backup:
+    required: true
+    requirements:
+      - Protect Home configuration, room/device registry, capability mappings, scenes, automations and privacy-permitted history needed for restoration.
+      - Keep reusable protocol credentials and other secrets outside ordinary application backups unless an approved protected recovery contract explicitly includes them.
+  restore:
+    required: true
+    requirements:
+      - Validate restoration into an isolated environment before production qualification.
+      - Verify device identity mappings, automation semantics, authorization boundaries and adapter configuration for the exact release under test.
+  export:
+    required: true
+    requirements:
+      - Provide documented portable exports for user-owned Home configuration, room/device organization, scenes and automations.
+      - Preserve semantic capability identifiers and relationships needed to migrate without exporting unrelated secrets.
+  portability:
+    required: true
+    requirements:
+      - Keep protocol adapters replaceable behind versioned GoreeCloud capability contracts.
+      - Use documented data formats and migrations for durable Home state.
+
+external_dependencies: []
+
+compatibility:
+  platform_contract: '0.2'
+  glaze_ui_required: 1.1.0
+  requires: [goreecloud-platform-contract==0.2]
+  provides: [goreecloud-home-api-v1, goreecloud-home-domain-v1]
+
+evidence:
+  acceptance_tests: []
+  release: []
+
+conformance:
+  status: nonconformant
+  validated_at: null
+  evidence: [README.md, SPECIFICATIONS.md, docs/architecture.md, docs/platform-integration-status.md, docs/security.md, docs/privacy.md, docs/recovery.md, src/goreecloud_home/models.py, src/goreecloud_home/core.py, src/goreecloud_home/journal.py, src/goreecloud_home/api.py, tests/test_core.py, tests/test_journal.py, VERSION]
+  blockers:
+    - GoreeCloud Home remains Development source and has no RC, Stable or production-approved release.
+    - GoreeCloud Identity authentication, sessions, household roles, guest access and capability-scoped authorization are not implemented or accepted.
+    - Wardveil Security device-trust, privileged-action, credential, network-risk and application acceptance are incomplete.
+    - Privacy Shield household telemetry, presence, camera, history retention, sharing and application acceptance are incomplete.
+    - Everkeep backup, restore, export, migration and recovery acceptance are incomplete.
+    - GoreeCloud Manager registration, monitoring and acceptance are incomplete.
+    - GoreeCloud Mesh capability registration, cross-product events and acceptance are incomplete.
+    - Glaze UI 1.1.0 Home client implementation, rendered validation, accessibility and application acceptance are incomplete.
+    - Matter, Thread, Zigbee, Z-Wave, MQTT, BLE and local LAN device interoperability are not implemented or validated.
+    - Automation execution, scenes, schedules, presence, notifications, cameras/media, energy management, remote access, AI/voice and production clients are incomplete.
+    - Packaging, signing, provenance, deployment, upgrade, rollback, hardware validation and production acceptance are incomplete.
