@@ -1,11 +1,17 @@
 # GoreeCloud Home Storage and Migration Contract
 
-`0.1.0-dev.2` uses one SQLite database for durable current state and the logical event journal. Domain mutations execute in a transaction that includes both the state write and the event append, preventing either representation from committing alone.
+`0.1.0-dev.3` uses one SQLite database for durable current state, adapter state, and the logical event journal. Domain mutations execute in transactions that include both current-state and event writes.
 
-The `schema_migrations` ledger currently reaches version 3: event journal; durable Home/Room/Device plus desired/reported state; and device availability. Readiness requires the expected schema version.
+The `schema_migrations` ledger currently reaches version 5:
 
-The original `0.1.0-dev.1` event-only database is migrated in place without deleting its existing events; automated tests cover this Development path.
+1. event journal,
+2. durable Home/Room/Device plus desired/reported state,
+3. device availability,
+4. optimistic desired/reported state revisions,
+5. persistent adapter registry/lifecycle.
 
-At startup, Home Core restores Home/Room/Device data, desired/reported state and availability, then re-validates ownership and capability contracts. Invalid persisted state fails startup rather than being silently reinterpreted.
+The original event-only Development database migrates forward without deleting prior events. The `0.1.0-dev.2` pre-registry adapter reference is also migrated into an explicit adapter record using protocol `unknown`, preserving the device relationship without falsely claiming a known protocol.
 
-This is not production backup/restore acceptance. Encrypted-at-rest policy, Everkeep integration, downgrade handling, isolated restore validation, multi-controller replication, event retention/compaction and production rollback remain incomplete.
+At startup, Home Core restores adapters, Home/Room/Device data, desired/reported values and revisions, and availability, then re-validates ownership, adapter references, and capability contracts before readiness.
+
+This is Development migration evidence only. Everkeep integration, encrypted-at-rest policy, production backup/restore, downgrade/rollback acceptance, multi-controller replication, and long-term event retention remain incomplete.

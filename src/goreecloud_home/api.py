@@ -6,7 +6,9 @@ from typing import Any
 import json
 
 from . import __version__
+from .adapters import ADAPTER_CONTRACT_VERSION
 from .core import HomeCore
+from .state_revision import STATE_REVISION_CONTRACT_VERSION
 
 
 class HomeStatusServer(ThreadingHTTPServer):
@@ -42,12 +44,16 @@ class HomeStatusHandler(BaseHTTPRequestHandler):
                         "homes": snapshot["homes"],
                         "rooms": snapshot["rooms"],
                         "devices": snapshot["devices"],
+                        "adapters": snapshot["adapters"],
                     },
                     "availability_counts": snapshot["availability_counts"],
+                    "adapter_lifecycle_counts": snapshot["adapter_lifecycle_counts"],
                     "storage_schema_version": snapshot["storage_schema_version"],
                     "capability_contract_version": snapshot[
                         "capability_contract_version"
                     ],
+                    "state_revision_contract_version": STATE_REVISION_CONTRACT_VERSION,
+                    "adapter_contract_version": ADAPTER_CONTRACT_VERSION,
                     "control_api": "not-exposed",
                 },
             )

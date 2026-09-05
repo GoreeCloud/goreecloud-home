@@ -2,14 +2,20 @@
 
 ## Capability contract v1
 
-`contracts/capabilities.v1.json` defines the first Home capability contract. Tests require semantic parity with runtime definitions. Definitions may specify name/version, value kind, writable/read-only direction, numeric bounds, unit, reported enumerations and narrower desired enumerations.
+`contracts/capabilities.v1.json` defines protocol-neutral capability semantics. Runtime definitions and the committed contract are required to match in automated tests. Definitions declare value type, write direction, ranges, units, and enumerations where applicable.
 
-A protocol adapter may not introduce an unregistered capability string and thereby redefine Home semantics implicitly. For example, `lock.state` may report `jammed`, but desired values are limited to `locked` and `unlocked`.
+## Device availability contract v1
 
-## Availability contract v1
+`contracts/device-availability.v1.json` defines `unknown`, `online`, `degraded`, and `offline` with explicit transitions. `unknown` is initial-only after a device reaches a known state. Same-state observations are journaled without pretending a transition occurred.
 
-`contracts/device-availability.v1.json` defines `unknown`, `online`, `degraded`, and `offline`, plus legal transitions. `unknown` is initial-only after a known state is reached. Same-state observations update timestamp/reason and are journaled as observations rather than transitions.
+## State revision contract v1
 
-## Next contract work
+`contracts/state-revision.v1.json` defines optimistic revisions for both desired and reported capability state. A new state value begins at revision `1`; callers may use `expected_revision: 0` to require creation or a positive expected revision to require an exact previous value. Every successful mutation increments by one. A stale expected revision fails with `state_revision_conflict` and commits neither state nor event.
 
-Adapter lifecycle/registration, command acknowledgement, state revision/conflict handling and automation execution semantics will be versioned separately.
+Passing no expected revision remains an internal unconditional mutation mode. Future network control APIs must define when unconditional writes are permitted; this Development contract does not authorize them remotely.
+
+## Adapter lifecycle contract v1
+
+`contracts/adapter-lifecycle.v1.json` defines persistent adapter registration and lifecycle states: `registered`, `starting`, `ready`, `degraded`, `failed`, and `stopped`. Device records that name an adapter require a registered adapter record. Same-state lifecycle observations are allowed and journaled separately from transitions.
+
+Protocol names identify an adapter boundary; they do not make that protocol implemented or interoperable. The current registry is infrastructure for future Matter/Thread and other adapters only.

@@ -16,7 +16,14 @@ class AvailabilityTests(unittest.TestCase):
             journal = EventJournal(f"{directory}/home.db")
             core = HomeCore(journal)
             core.create_home(Home("home", "Home"))
-            core.register_device(Device(id="sensor", home_id="home", name="Sensor", capabilities=frozenset({"sensor.motion"})))
+            core.register_device(
+                Device(
+                    id="sensor",
+                    home_id="home",
+                    name="Sensor",
+                    capabilities=frozenset({"sensor.motion"}),
+                )
+            )
             first = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
             second = datetime(2026, 9, 5, 20, 1, tzinfo=timezone.utc)
             core.observe_device_availability("sensor", "online", observed_at=first)
@@ -24,6 +31,7 @@ class AvailabilityTests(unittest.TestCase):
             core.observe_device_availability("sensor", "offline", reason="heartbeat timeout")
             with self.assertRaises(ValueError):
                 core.observe_device_availability("sensor", DeviceAvailability.UNKNOWN)
+
             events = journal.list_since()
             self.assertEqual("device.availability.changed", events[-3].event_type)
             self.assertEqual("device.availability.observed", events[-2].event_type)

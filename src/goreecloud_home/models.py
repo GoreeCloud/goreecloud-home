@@ -63,6 +63,8 @@ class Device:
     adapter: str | None = None
     desired_state: dict[str, Any] = field(default_factory=dict)
     reported_state: dict[str, Any] = field(default_factory=dict)
+    desired_revisions: dict[str, int] = field(default_factory=dict)
+    reported_revisions: dict[str, int] = field(default_factory=dict)
     availability: DeviceAvailability = DeviceAvailability.UNKNOWN
     availability_updated_at: str | None = None
     availability_reason: str | None = None
@@ -81,6 +83,11 @@ class Device:
         if len(normalized) > 128:
             raise ValueError("device may expose at most 128 capabilities")
         self.capabilities = normalized
+        for revisions in (self.desired_revisions, self.reported_revisions):
+            for capability, revision in revisions.items():
+                validate_capability(capability)
+                if type(revision) is not int or revision < 1:
+                    raise ValueError("state revisions must be positive integers")
         self.availability = normalize_availability(self.availability)
         self.availability_reason = normalize_reason(self.availability_reason)
 
