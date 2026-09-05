@@ -5,11 +5,11 @@ GoreeCloud Home is an original, local-first GoreeCloud smart-home platform for h
 ## Status
 
 **Lifecycle:** Development  
-**Version:** `0.1.0-dev.4`  
+**Version:** `0.1.0-dev.5`  
 **Conformance:** Nonconformant  
 **Repository:** `GoreeCloud/goreecloud-home`
 
-Home Core now provides durable device/state foundations plus the first persistent declarative scene, automation, schedule and execution-history engine. It still exposes only bounded read-only diagnostic HTTP routes and does not yet control physical smart-home protocols.
+Home Core provides durable device/state foundations, persistent declarative scenes/automations/schedules, and a bounded local automation runtime. The Development network surface remains read-only and no physical smart-home protocol interoperability is implemented yet.
 
 ## Current contracts
 
@@ -17,15 +17,19 @@ Home Core now provides durable device/state foundations plus the first persisten
 - Device Availability Contract v1
 - State Revision Contract v1
 - Adapter Lifecycle Contract v1
+- Adapter Event Contract v1
 - Automation Contract v1
+- Automation Runtime Contract v1
 
-## Automation foundation
+## Automation runtime
 
-Scenes use ordered validated desired-state writes. Automations can use manual, reported-state, availability or schedule triggers, optional state/availability conditions, and `set_desired` / `activate_scene` actions. Definitions and execution history survive restart.
+`HomeAutomationEngine` continues to own persistent scenes, schedules, automation definitions and execution history. `HomeAutomationRuntime` now consumes committed Home journal events in sequence order and automatically routes changed reported-state and changed availability events into the existing bounded evaluator. A durable runtime cursor survives restart and starts at the current journal head when first introduced, so upgrading to dev.5 does not replay older household events.
 
-Execution is deterministic and bounded: 32 actions maximum, 16 conditions maximum, 32 automation matches per trigger, and at most three whole-run attempts. Successful action sets commit atomically; failed attempts roll back desired-state changes and are recorded in history. Arbitrary code, shell, templates and automation-to-automation actions are not supported.
+The runtime also supplies the controller-local, timezone-aware background schedule clock. Schedule duplicate-occurrence suppression remains durable. The underlying Automation Contract still accepts explicit caller evaluation; the runtime is the separate process-lifecycle component that provides autonomous local clock/event driving.
 
-Schedules are evaluated against a caller-supplied timezone-aware datetime and suppress duplicate occurrences durably. A background clock service and automatic protocol-event routing are not implemented yet.
+Delivery is intentionally documented as ordered **at-least-once**, not exactly-once. A crash after an automation state assignment commits but before its source-event cursor checkpoint can replay that source event. Current automation actions are limited to idempotent desired-state assignments and scene activations composed of those assignments; arbitrary code, shell, templates, external side effects and recursive automation actions remain unsupported.
+
+`LocalAdapterEventRouter` defines a trusted local ingress boundary for future adapters. It accepts reported-state or availability observations only from a registered adapter in `ready` or `degraded` state and only for devices bound to that adapter. This boundary does not implement Matter, Thread, Zigbee, Z-Wave, MQTT, BLE, LAN or any vendor protocol.
 
 ## Run Development Home Core
 
@@ -33,7 +37,7 @@ Schedules are evaluated against a caller-supplied timezone-aware datetime and su
 PYTHONPATH=src python -m goreecloud_home --database ./home.db --listen 127.0.0.1:8765
 ```
 
-Available routes: `GET /livez`, `GET /readyz`, `GET /api/v1/status`. The HTTP surface is intentionally read-only.
+The process starts Home Core, the persistent automation engine and the local automation runtime. Available network routes remain `GET /livez`, `GET /readyz`, and `GET /api/v1/status`; there are no HTTP write/control routes.
 
 ## Tests
 
@@ -44,4 +48,4 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 
 ## Next development
 
-Complete Milestone 2 event/clock integration and additional deterministic trigger semantics, then begin Matter/Thread adapter boundaries, commissioning credential handling and interoperability fixtures. Glaze UI and substantive GoreeCloud platform integrations follow as evidence-backed workstreams.
+Complete additional deterministic time semantics such as sunrise/sunset and bounded calendar triggers. Presence/geofence work must wait for explicit GoreeCloud Location and Privacy Shield boundaries. Then begin Matter/Thread adapter boundaries, commissioning credential handling, subscriptions and interoperability fixtures, followed by the Glaze UI Home client and substantive GoreeCloud platform integrations.

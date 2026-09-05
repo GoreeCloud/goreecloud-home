@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 
 from .api import HomeStatusServer
+from .automation_engine import HomeAutomationEngine
+from .automation_runtime import HomeAutomationRuntime
 from .core import HomeCore
 from .journal import EventJournal
 
@@ -28,7 +30,15 @@ def main() -> None:
 
     journal = EventJournal(args.database)
     core = HomeCore(journal)
-    server = HomeStatusServer(args.listen, core)
+    automation_engine = HomeAutomationEngine(core)
+    automation_runtime = HomeAutomationRuntime(automation_engine)
+    automation_runtime.start()
+    server = HomeStatusServer(
+        args.listen,
+        core,
+        automation_engine=automation_engine,
+        automation_runtime=automation_runtime,
+    )
     host, port = server.server_address[:2]
     print(f"GoreeCloud Home Development status server listening on http://{host}:{port}")
     try:
@@ -37,6 +47,7 @@ def main() -> None:
         pass
     finally:
         server.server_close()
+        automation_runtime.stop()
         journal.close()
 
 
