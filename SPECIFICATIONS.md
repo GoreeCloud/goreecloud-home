@@ -5,194 +5,82 @@
 - Product: GoreeCloud Home
 - Short name: Home
 - Repository: GoreeCloud/goreecloud-home
-- Version: 0.1.0-dev.1
+- Version: 0.1.0-dev.2
 - Lifecycle: Development
 - Development model: Original GoreeCloud-controlled software
 - Platform Contract: 0.2
-- Current implementation claim: Home Core foundation only
+- Current implementation claim: Home Core persistence and state-contract foundation only
 
-## 1. Purpose
+## 1. Purpose and product boundary
 
-GoreeCloud Home is the native GoreeCloud smart-home platform. Its goal is to combine approachable household control with deep automation and broad interoperability while preserving local operation, privacy, portability, recoverability and GoreeCloud platform integration.
+GoreeCloud Home is the native GoreeCloud smart-home platform. It is intended to combine approachable household control with deep local automation and broad interoperability while preserving privacy, portability, recoverability, offline operation and substantive GoreeCloud platform integration.
 
-Home must not be a maintained fork, white-label deployment or architectural reskin of Home Assistant, Google Home, Apple Home/HomeKit, or another complete smart-home product. Standards-compatible foundational protocol libraries may be used when justified, but GoreeCloud owns and controls the application-defining state model, automation model, user experience, APIs, security boundaries and lifecycle.
+Home must not become a maintained fork, white-label deployment or architectural reskin of Home Assistant, Google Home, Apple Home/HomeKit, or another complete smart-home application. Standards-compatible foundational protocol libraries may be used when justified, but GoreeCloud owns the application-defining state model, automation model, APIs, user experience, security boundaries and lifecycle.
 
 ## 2. Product identity
 
-- Canonical name: GoreeCloud Home
-- Approved short runtime label: Home
-- Brand relationship: prefixed GoreeCloud family product
-- GoreeCloud Suite member: yes
-- Repository: GoreeCloud/goreecloud-home
-- Package/application suffix: home
-- Intended application identifier: com.goreecloud.home
+Canonical name: **GoreeCloud Home**. Approved short runtime label: **Home**. Repository: `GoreeCloud/goreecloud-home`. Package/application suffix: `home`. Intended application identifier: `com.goreecloud.home`.
 
-## 3. Architecture
+## 3. Local architecture
 
-Home is split into replaceable layers:
+Home Core is the authoritative local domain service inside one Home Controller. Its current layers are a Home/Room/Device domain registry, versioned capability contracts, desired/reported state, device availability, a durable SQLite current-state projection and a durable event journal. The current-state projection and event journal share one SQLite transaction authority.
 
-1. **Home Core** — authoritative local household domain state and coordination.
-2. **Capability model** — protocol-neutral device capabilities.
-3. **Desired/reported state model** — separates intended state from observed device state.
-4. **Event journal** — durable local chronology required for offline operation, auditability and recovery.
-5. **Automation engine** — planned trigger/condition/action execution with scenes and schedules.
-6. **Protocol adapters** — planned Matter/Thread, Zigbee, Z-Wave, MQTT, BLE and LAN integrations.
-7. **Client surfaces** — planned Glaze UI web, Android, Linux, wall-display and quick-control experiences.
-8. **Platform adapters** — Manager, Privacy Shield, Wardveil Security, Everkeep, Glaze UI, Mesh and Identity.
+Home Core must not require GoreeCloud Mesh to preserve local state or, later, execute safety-relevant local automation.
 
-Home Core must not require GoreeCloud Mesh to execute local automations or preserve safety-relevant local state.
+## 4. Durable storage and migration
 
-## 4. Domain model
+The Development database maintains `schema_migrations` and currently reaches schema version 3:
 
-### Home
+1. event journal,
+2. durable Home/Room/Device and desired/reported capability state,
+3. persistent device availability.
 
-Represents one household authority boundary. A Home owns rooms and registered devices.
+A domain state mutation and its logical event commit atomically. If journaling fails, the state change is rolled back; an event cannot remain committed without its associated state mutation. Home Core reconstructs its in-process registry from durable state at startup and re-validates ownership boundaries and capability/state contracts before readiness.
 
-### Room
+The migration path from the original `0.1.0-dev.1` event-only Development database preserves existing events and is covered by automated tests. This does not constitute production upgrade, downgrade, backup, restore or rollback acceptance.
 
-A user-facing placement inside one Home. Future floors and zones can group rooms without changing device ownership.
+## 5. Capability contract v1
 
-### Device
+`contracts/capabilities.v1.json` is the machine-readable initial capability contract. Runtime definitions and the committed contract must match exactly in tests. Each capability may define value kind, writable/read-only direction, numeric bounds, unit, reported enumeration and a narrower desired enumeration.
 
-Represents a physical or virtual controllable/observable device. Each device declares a set of GoreeCloud capability identifiers.
+Initial definitions include `light.power`, `light.brightness`, `switch.power`, `lock.state`, `cover.position`, `thermostat.target_temperature`, `sensor.temperature`, `sensor.humidity`, `sensor.motion`, and `sensor.contact`. A protocol adapter may not introduce arbitrary unregistered capability names and thereby redefine the Home model implicitly.
 
-### Capability
+Desired state is validated separately from reported state. Read-only sensors reject desired writes. Diagnostic reported values that are not valid commands remain reportable; for example, a lock may report `jammed` while desired lock state is limited to `locked` or `unlocked`.
 
-Protocol-neutral functional contract such as:
+## 6. Device availability contract v1
 
-- `light.power`
-- `light.brightness`
-- `light.color`
-- `light.color_temperature`
-- `switch.power`
-- `lock.state`
-- `cover.position`
-- `thermostat.mode`
-- `thermostat.target_temperature`
-- `sensor.temperature`
-- `sensor.humidity`
-- `sensor.motion`
-- `sensor.contact`
-- `camera.stream`
-- `camera.snapshot`
-- `media.playback`
-- `media.volume`
+`contracts/device-availability.v1.json` defines `unknown`, `online`, `degraded`, and `offline` with explicit legal transitions. `unknown` is initial-only once a device reaches a known state. Same-state updates are recorded as observations rather than transitions. Availability timestamps and optional bounded reasons are persisted.
 
-Adapters translate native protocol properties into this model. Protocol-specific details that cannot be represented losslessly may be retained as adapter metadata without redefining the Home Core domain.
+## 7. Event model
 
-## 5. State model
+Material Home Core transitions append immutable logical events with monotonically increasing sequence identifiers. Current event families include Home creation, Room creation, device registration, desired/report state changes, availability transitions and same-state availability observations.
 
-Home maintains two distinct state classes:
+## 8. API boundary
 
-- **Desired state:** what an authorized actor wants a capability to become.
-- **Reported state:** what the device or adapter actually reports.
+Current Development HTTP routes are `GET /livez`, `GET /readyz`, and `GET /api/v1/status`. The status surface exposes only bounded product/lifecycle data, aggregate counts, aggregate availability, storage schema version and capability-contract version. It does not expose household state, event payloads, credentials or identities.
 
-The distinction is required so Home can represent pending commands, offline devices, failed transitions, retries and conflicts without falsely reporting intent as device reality.
+No network write/control API is implemented. Future control requires GoreeCloud Identity authorization, Wardveil Security controls, Privacy Shield review and explicit capability scopes.
 
-## 6. Event model
+## 9. Automation and protocol direction
 
-Material Home Core transitions append immutable logical events to a local journal. Initial events include home creation, room creation, device registration, desired-state changes and reported-state changes.
+The next core milestones are versioned adapter lifecycle/registration plus state revision/conflict semantics, followed by a GoreeCloud-owned declarative automation model for scenes, triggers, conditions, actions, schedules and execution history. Matter and Thread remain the first protocol-adapter priority, followed by local LAN, MQTT, Zigbee, Z-Wave, BLE and bounded vendor adapters.
 
-The Development journal uses SQLite and monotonically increasing sequence IDs. Future schema evolution must preserve migration and recovery paths.
+Protocol implementations must translate into versioned GoreeCloud capability/availability contracts and may not become the canonical product state model.
 
-## 7. Automation model — planned
+## 10. Integral Platform Systems
 
-The automation engine will use a GoreeCloud-owned declarative model with:
+GoreeCloud Manager, Privacy Shield, Wardveil Security, Everkeep, Glaze UI, GoreeCloud Mesh and GoreeCloud Identity are all applicable and all remain blocked/unaccepted runtime integrations at `0.1.0-dev.2`. The current persistence work is not Everkeep recovery acceptance, and the read-only status API is not Manager integration acceptance.
 
-- triggers
-- conditions
-- actions
-- scenes
-- schedules
-- sunrise/sunset conditions
-- presence/geofence conditions through GoreeCloud Location when applicable
-- rate limiting and loop prevention
-- explicit authorization context
-- deterministic local execution where supported
-- execution history and failure reason
+## 11. Security, privacy and continuity
 
-A future visual editor and text/YAML representation must map to the same underlying semantic model rather than becoming separate automation systems.
+Locks, doors, alarms, cameras, access credentials and comparable capabilities are high-risk and require stronger authorization and audit controls before network control is exposed. Reusable protocol secrets and cryptographic material must remain out of ordinary source history and status output. Local-only operation remains a valid target; cloud functionality must be additive. Home requires future tested backup, restore, export and migration for applicable user-owned configuration/state while respecting Privacy Shield policy.
 
-## 8. Protocol strategy
+## 12. Implemented state
 
-Planned priority:
+`0.1.0-dev.2` implements validated Home/Room/Device models, shared SQLite current-state/journal authority, three migrations, restart restoration, atomic state/event transactions, capability contract v1, availability contract v1, desired/reported validation, read-only diagnostics, and automated domain/persistence/migration/contract tests.
 
-1. Matter and Thread
-2. local Wi-Fi/LAN discovery and control
-3. MQTT
-4. Zigbee
-5. Z-Wave
-6. BLE and Bluetooth proxying
-7. bounded vendor adapters where necessary
+## 13. Explicitly not implemented
 
-Protocol libraries are foundational dependencies and must remain isolated behind GoreeCloud adapter contracts. Home must not expose protocol internals as the permanent product data model.
+Matter/Thread commissioning/fabrics, Zigbee, Z-Wave, MQTT, BLE, physical device drivers, adapter lifecycle/registration, state revision/conflict handling, automation execution, scenes, schedules, production authentication/authorization, remote access, notifications, camera/media pipelines, energy management, GoreeCloud Location presence, GoreeCloud AI/voice, Glaze UI clients, substantive Integral Platform System runtime integrations, backup/restore execution, packaging, signing, deployment, hardware acceptance, RC, Stable and production qualification remain incomplete.
 
-## 9. Hub and node model — planned
-
-A Home should have one authoritative Home Controller at a time. Additional Home Nodes may provide radios, Thread Border Router functions, BLE proxying or other edge connectivity. Controller authority and failover must prevent split-brain state.
-
-Supported deployment targets are planned to include dedicated hub hardware, Linux server/container/VM deployment, and development workstation operation.
-
-## 10. API
-
-Current Development HTTP API is loopback-oriented and read-only:
-
-- `GET /livez`
-- `GET /readyz`
-- `GET /api/v1/status`
-
-No unauthenticated device-control endpoint is part of the current public runtime surface. Future write/control APIs require GoreeCloud Identity authorization, Wardveil Security controls, Privacy Shield review and explicit capability scopes.
-
-## 11. Integral Platform Systems
-
-All seven systems are applicable:
-
-- GoreeCloud Manager — health, inventory and operations visibility.
-- Privacy Shield — household telemetry, camera/presence/history retention and data governance.
-- Wardveil Security — device trust, privileged control, secrets, network risk and audit.
-- Everkeep — configuration, automation, history-policy-aware backup, restore and export.
-- Glaze UI — accessible responsive Home client experiences.
-- GoreeCloud Mesh — discovery, non-safety-critical cross-product events and capability exchange.
-- GoreeCloud Identity — household authentication, users, guests, sessions, roles and authorization.
-
-At version 0.1.0-dev.1 these integrations are requirements, not implemented/accepted integrations.
-
-## 12. Security boundaries
-
-Locks, garage doors, alarms, cameras, access credentials and equivalent capabilities are high-risk. Future control requires explicit authorization context and elevated safeguards. Reusable protocol credentials and cryptographic material must never be committed to Git or exposed in ordinary status output.
-
-The Development HTTP server binds to loopback by default and exposes no write/control API.
-
-## 13. Privacy
-
-Local-only operation must remain a valid configuration. Cloud use must be additive rather than required for core local control. Presence, camera, audio, behavioral and household-history data require explicit retention and sharing controls.
-
-No advertising, third-party behavioral analytics or mandatory telemetry is part of the product design.
-
-## 14. Continuity and portability
-
-Home requires backup, restore, export and migration support for applicable configuration, rooms, devices, capability mappings, automations, scenes and user-owned state/history according to privacy policy. Recovery qualification must test restore behavior rather than merely create backups.
-
-## 15. Current implementation
-
-Version 0.1.0-dev.1 implements:
-
-- validated domain identifiers and dataclasses for Home, Room and Device
-- a thread-safe in-process Home Core registry
-- protocol-neutral device capability identifiers
-- desired and reported state maps
-- durable SQLite event journal
-- read-only loopback status/liveness/readiness HTTP server
-- unit tests for domain invariants, state changes and event persistence
-- Platform Contract v0.2 declaration
-- CI foundation
-
-## 16. Explicitly not implemented yet
-
-Matter/Thread commissioning and fabrics; Zigbee; Z-Wave; MQTT; BLE; physical device drivers; production API authentication; household Identity integration; authorization roles; automation execution; scenes; remote access; notifications; cameras/media pipelines; energy management; GoreeCloud Location presence; GoreeCloud AI/voice; Glaze UI clients; Manager/Privacy Shield/Wardveil/Everkeep/Mesh runtime integration; backup/restore execution; packaging; deployment; signing; production acceptance; RC or Stable qualification.
-
-## 17. Acceptance direction
-
-Future milestones must validate exact revisions with unit/integration tests, protocol interoperability fixtures or real hardware where relevant, offline behavior, restoration, authorization, privileged action controls, privacy retention, accessibility, upgrade/rollback and release provenance.
-
-Passing foundation tests does not qualify Home for production use.
+Passing Development tests or Platform Contract validation does not qualify Home for production use.

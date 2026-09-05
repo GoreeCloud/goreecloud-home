@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 import json
 
+from . import __version__
 from .core import HomeCore
 
 
@@ -22,7 +23,7 @@ class HomeStatusHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"status": "live"})
             return
         if self.path == "/readyz":
-            ready = self.server.core.journal.ready()
+            ready = self.server.core.ready()
             self._json(
                 HTTPStatus.OK if ready else HTTPStatus.SERVICE_UNAVAILABLE,
                 {"status": "ready" if ready else "not-ready"},
@@ -34,7 +35,7 @@ class HomeStatusHandler(BaseHTTPRequestHandler):
                 HTTPStatus.OK,
                 {
                     "product": "GoreeCloud Home",
-                    "version": "0.1.0-dev.1",
+                    "version": __version__,
                     "lifecycle": "development",
                     "conformance": "nonconformant",
                     "counts": {
@@ -42,6 +43,11 @@ class HomeStatusHandler(BaseHTTPRequestHandler):
                         "rooms": snapshot["rooms"],
                         "devices": snapshot["devices"],
                     },
+                    "availability_counts": snapshot["availability_counts"],
+                    "storage_schema_version": snapshot["storage_schema_version"],
+                    "capability_contract_version": snapshot[
+                        "capability_contract_version"
+                    ],
                     "control_api": "not-exposed",
                 },
             )

@@ -21,21 +21,11 @@ class HomeCoreTests(unittest.TestCase):
     def test_domain_and_state_flow_preserves_desired_reported_distinction(self) -> None:
         self.core.create_home(Home("main-home", "Main Home"))
         self.core.create_room(Room("living-room", "main-home", "Living Room"))
-        self.core.register_device(
-            Device(
-                id="lamp-1",
-                home_id="main-home",
-                room_id="living-room",
-                name="Lamp",
-                capabilities=frozenset({"light.power", "light.brightness"}),
-                adapter="test",
-            )
-        )
+        self.core.register_device(Device(id="lamp-1", home_id="main-home", room_id="living-room", name="Lamp", capabilities=frozenset({"light.power", "light.brightness"}), adapter="test"))
         self.core.set_desired_state("lamp-1", "light.power", True)
         snapshot = self.core.snapshot()
         self.assertTrue(snapshot["device_state"]["lamp-1"]["desired"]["light.power"])
         self.assertNotIn("light.power", snapshot["device_state"]["lamp-1"]["reported"])
-
         self.core.set_reported_state("lamp-1", "light.power", True)
         snapshot = self.core.snapshot()
         self.assertTrue(snapshot["device_state"]["lamp-1"]["reported"]["light.power"])
@@ -43,14 +33,7 @@ class HomeCoreTests(unittest.TestCase):
 
     def test_device_cannot_claim_unsupported_capability(self) -> None:
         self.core.create_home(Home("home", "Home"))
-        self.core.register_device(
-            Device(
-                id="switch-1",
-                home_id="home",
-                name="Switch",
-                capabilities=frozenset({"switch.power"}),
-            )
-        )
+        self.core.register_device(Device(id="switch-1", home_id="home", name="Switch", capabilities=frozenset({"switch.power"})))
         with self.assertRaises(ValueError):
             self.core.set_desired_state("switch-1", "lock.state", "locked")
 
@@ -59,15 +42,22 @@ class HomeCoreTests(unittest.TestCase):
         self.core.create_home(Home("home-b", "B"))
         self.core.create_room(Room("room-a", "home-a", "Room A"))
         with self.assertRaises(ValueError):
-            self.core.register_device(
-                Device(
-                    id="sensor-1",
-                    home_id="home-b",
-                    room_id="room-a",
-                    name="Sensor",
-                    capabilities=frozenset({"sensor.motion"}),
-                )
-            )
+            self.core.register_device(Device(id="sensor-1", home_id="home-b", room_id="room-a", name="Sensor", capabilities=frozenset({"sensor.motion"})))
+
+    def test_capability_contract_validates_values_and_write_direction(self) -> None:
+        self.core.create_home(Home("home", "Home"))
+        self.core.register_device(Device(id="combo", home_id="home", name="Combo", capabilities=frozenset({"light.brightness", "sensor.motion"})))
+        with self.assertRaises(ValueError):
+            self.core.set_desired_state("combo", "light.brightness", 101)
+        with self.assertRaises(ValueError):
+            self.core.set_desired_state("combo", "sensor.motion", True)
+        self.core.set_reported_state("combo", "sensor.motion", False)
+        self.assertFalse(self.core.snapshot()["device_state"]["combo"]["reported"]["sensor.motion"])
+        self.core.register_device(Device(id="lock", home_id="home", name="Lock", capabilities=frozenset({"lock.state"})))
+        with self.assertRaises(ValueError):
+            self.core.set_desired_state("lock", "lock.state", "jammed")
+        self.core.set_desired_state("lock", "lock.state", "locked")
+        self.core.set_reported_state("lock", "lock.state", "jammed")
 
 
 if __name__ == "__main__":

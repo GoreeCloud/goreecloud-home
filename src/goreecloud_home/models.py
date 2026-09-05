@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any
 import re
 
+from .availability import DeviceAvailability, normalize_availability, normalize_reason
+
 _IDENTIFIER = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
 _CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$")
 
@@ -12,6 +14,15 @@ def _validate_identifier(value: str, label: str) -> str:
     if not _IDENTIFIER.fullmatch(value):
         raise ValueError(f"invalid {label}: {value!r}")
     return value
+
+
+def _validate_name(value: str, label: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{label} must not be empty")
+    if len(normalized) > 256:
+        raise ValueError(f"{label} must be 256 characters or fewer")
+    return normalized
 
 
 def validate_capability(value: str) -> str:
@@ -27,8 +38,7 @@ class Home:
 
     def __post_init__(self) -> None:
         _validate_identifier(self.id, "home id")
-        if not self.name.strip():
-            raise ValueError("home name must not be empty")
+        object.__setattr__(self, "name", _validate_name(self.name, "home name"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,8 +50,7 @@ class Room:
     def __post_init__(self) -> None:
         _validate_identifier(self.id, "room id")
         _validate_identifier(self.home_id, "home id")
-        if not self.name.strip():
-            raise ValueError("room name must not be empty")
+        object.__setattr__(self, "name", _validate_name(self.name, "room name"))
 
 
 @dataclass(slots=True)
@@ -54,18 +63,26 @@ class Device:
     adapter: str | None = None
     desired_state: dict[str, Any] = field(default_factory=dict)
     reported_state: dict[str, Any] = field(default_factory=dict)
+    availability: DeviceAvailability = DeviceAvailability.UNKNOWN
+    availability_updated_at: str | None = None
+    availability_reason: str | None = None
 
     def __post_init__(self) -> None:
         _validate_identifier(self.id, "device id")
         _validate_identifier(self.home_id, "home id")
         if self.room_id is not None:
             _validate_identifier(self.room_id, "room id")
-        if not self.name.strip():
-            raise ValueError("device name must not be empty")
+        if self.adapter is not None:
+            _validate_identifier(self.adapter, "adapter id")
+        self.name = _validate_name(self.name, "device name")
         normalized = frozenset(validate_capability(item) for item in self.capabilities)
         if not normalized:
             raise ValueError("device must expose at least one capability")
+        if len(normalized) > 128:
+            raise ValueError("device may expose at most 128 capabilities")
         self.capabilities = normalized
+        self.availability = normalize_availability(self.availability)
+        self.availability_reason = normalize_reason(self.availability_reason)
 
     def require_capability(self, capability: str) -> None:
         validate_capability(capability)

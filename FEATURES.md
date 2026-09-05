@@ -2,61 +2,49 @@
 
 Status labels: **Implemented**, **Partial**, **Planned**, **Blocked**.
 
-## Implemented in 0.1.0-dev.1
+## Implemented in 0.1.0-dev.2
 
 - **Implemented:** local Home, Room and Device domain registry.
-- **Implemented:** protocol-neutral capability identifiers on devices.
+- **Implemented:** durable SQLite persistence for homes, rooms, devices, desired state and reported state.
+- **Implemented:** versioned SQLite migration ledger through schema version 3.
+- **Implemented:** atomic state-plus-event transactions inside one local SQLite authority.
+- **Implemented:** restart restoration of persisted Home Core state.
+- **Implemented:** protocol-neutral capability identifiers and machine-readable capability contract v1.
+- **Implemented:** type/range/unit/enumeration validation for the initial capability set.
+- **Implemented:** read-only capability rejection and distinct desired/reported semantics where needed.
 - **Implemented:** desired-state and reported-state separation.
 - **Implemented:** durable SQLite event journal with monotonic sequence IDs.
-- **Implemented:** read-only loopback liveness, readiness and bounded status endpoints.
-- **Implemented:** domain/state/event unit tests and compile validation in CI.
+- **Implemented:** machine-readable device availability contract v1.
+- **Implemented:** persistent `unknown`, `online`, `degraded`, and `offline` availability with transition validation and observation events.
+- **Implemented:** bounded read-only loopback liveness, readiness and status endpoints.
+- **Implemented:** automated tests for domain, persistence, migration, transaction rollback, availability, and contract parity.
 - **Implemented:** GoreeCloud Platform Contract v0.2 manifest.
 
 ## Planned Home Core
 
 - **Planned:** floors, zones and reusable device groups.
-- **Planned:** scenes and scene activation.
-- **Planned:** automation triggers, conditions and actions.
-- **Planned:** schedules, sunrise/sunset and calendar-aware conditions.
+- **Planned:** state revision/conflict semantics for concurrent adapter/client activity.
+- **Planned:** adapter registration and lifecycle contracts.
+- **Planned:** scenes, triggers, conditions, actions and schedules.
 - **Planned:** automation execution history, retries and loop prevention.
-- **Planned:** device availability/health and adapter diagnostics.
-- **Planned:** energy and utility telemetry model.
-- **Planned:** multi-controller recovery and controlled Home Node model.
+- **Planned:** energy/utility telemetry and richer device diagnostics.
+- **Planned:** controlled Home Node and controller failover model.
 
 ## Planned protocols
 
-- **Planned:** Matter discovery and commissioning.
-- **Planned:** Matter fabrics, subscriptions and device control.
+- **Planned:** Matter discovery, commissioning, fabrics, subscriptions and device control.
 - **Planned:** Thread Border Router integration.
 - **Planned:** local Wi-Fi/LAN discovery and adapters.
-- **Planned:** MQTT adapter.
-- **Planned:** Zigbee coordinator and device adapter support.
-- **Planned:** Z-Wave controller and device adapter support.
-- **Planned:** BLE devices and proxy nodes.
+- **Planned:** MQTT, Zigbee, Z-Wave and BLE/proxy-node adapters.
 - **Planned:** bounded vendor adapters when open/local standards are insufficient.
 
-## Planned clients and experience
+## Planned clients and GoreeCloud integration
 
 - **Blocked:** Glaze UI web/desktop Home client pending implementation and acceptance.
-- **Planned:** Android client.
-- **Planned:** Linux client/shell integration.
-- **Planned:** tablet/wall-dashboard mode.
-- **Planned:** favorites, rooms, devices, scenes and automation dashboards.
-- **Planned:** visual automation editor backed by the same declarative automation model.
-- **Planned:** actionable notifications and quick controls.
-
-## Planned GoreeCloud integration
-
-- **Blocked:** GoreeCloud Identity household auth, sessions, roles and capability scopes.
-- **Blocked:** Wardveil Security privileged action, device trust, secret and risk controls.
+- **Blocked:** GoreeCloud Identity household authentication, sessions, roles and capability scopes.
+- **Blocked:** Wardveil Security privileged-action, device-trust, secret and risk controls.
 - **Blocked:** Privacy Shield retention, telemetry, camera/presence and sharing policy enforcement.
 - **Blocked:** Everkeep backup, restore, export and recovery acceptance.
-- **Blocked:** GoreeCloud Manager operational registration and health consumption.
-- **Blocked:** GoreeCloud Mesh capability registration and cross-product event exchange.
-- **Blocked:** Glaze UI conformance and accessibility acceptance.
-- **Planned:** GoreeCloud Location geofencing/presence integration.
-- **Planned:** GoreeCloud AI natural-language automation assistance and bounded voice control.
-
-## Planned device categories
-
-Lights, switches, smart plugs, locks, garage doors, covers/blinds, fans, thermostats/HVAC, environmental sensors, motion/contact sensors, alarms, cameras, doorbells, media devices, appliances, irrigation, vacuums, energy meters and other devices that can be mapped safely into versioned GoreeCloud capabilities.
+- **Blocked:** GoreeCloud Manager registration/health consumption.
+- **Blocked:** GoreeCloud Mesh capability registration and cross-product events.
+- **Planned:** Android/Linux clients, wall dashboard, actionable notifications, GoreeCloud Location presence, and bounded GoreeCloud AI/voice assistance.
