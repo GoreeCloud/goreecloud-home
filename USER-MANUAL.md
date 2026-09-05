@@ -1,25 +1,16 @@
 # GoreeCloud Home — Development User Manual
 
-## Scope
+This manual covers `0.1.0-dev.4` Development Home Core and its companion automation engine only.
 
-This manual covers the `0.1.0-dev.3` Home Core Development checkpoint only. It is not a consumer smart-home setup guide and does not claim hardware compatibility.
-
-## Requirements
-
-- Python 3.12+
-- a writable location for the SQLite database
-
-## Start Home Core
+## Start
 
 ```bash
 PYTHONPATH=src python -m goreecloud_home --database ./home.db --listen 127.0.0.1:8765
 ```
 
-The service binds to loopback by default. Do not expose this Development runtime directly to an untrusted network.
+The service binds to loopback by default. The Home state database remains at Development schema version 5. Initializing `HomeAutomationEngine` creates or validates automation storage schema version 1 in the same SQLite database without redefining the Home state-schema ledger.
 
-The database is migrated automatically to the current Development schema. The original event-only Development database layout is upgraded in place without deleting existing events. Back up Development data before experimenting with future schema changes; production-grade upgrade/rollback is not yet accepted.
-
-## Health endpoints
+## Diagnostics
 
 ```bash
 curl http://127.0.0.1:8765/livez
@@ -27,26 +18,19 @@ curl http://127.0.0.1:8765/readyz
 curl http://127.0.0.1:8765/api/v1/status
 ```
 
-The status response includes bounded aggregate counts plus the storage schema version, capability-contract version, state-revision contract version, adapter-lifecycle contract version, and bounded adapter/availability counts. It does not expose device names, room names, desired/reported values, household identities, event payloads, or credentials.
+Status exposes bounded aggregate counts and contract/schema versions, not household state values, automation definitions, execution payloads, credentials or identities. There are no HTTP write/control endpoints.
 
-The current HTTP API has no write/device-control endpoints.
+## Automation development API
 
-## Contracts
+Trusted local Python callers may create Scene, Schedule and Automation definitions through `HomeAutomationEngine` and invoke scene activation, manual automation execution, trigger evaluation or schedule evaluation. Schedule evaluation requires an explicit timezone-aware datetime. Automatic adapter-event routing and a background clock driver are not implemented yet.
 
-- `contracts/capabilities.v1.json` — initial capability value and write-direction contract.
-- `contracts/device-availability.v1.json` — device availability states and legal transitions.
-- `contracts/state-revision.v1.json` — optimistic desired/reported revision and stale-write conflict semantics.
-- `contracts/adapter-lifecycle.v1.json` — adapter registration and lifecycle transitions.
+Execution history is durable and records succeeded, failed and skipped runs. Failed action attempts roll back desired-state mutations before failure history is written. Bounded whole-run retry attempts are supported.
 
-These are Development contracts. Incompatible changes require a new contract version rather than silently redefining existing semantics.
-
-## Run tests
+## Tests
 
 ```bash
 PYTHONPATH=src python -m compileall -q src tests
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-## Current limitations
-
-No Matter/Thread, Zigbee, Z-Wave, MQTT, BLE, physical device control, automation execution, production authentication, remote access, Home client UI or production deployment is implemented yet.
+No Matter/Thread, Zigbee, Z-Wave, MQTT, BLE, physical-device control, production authentication, remote access or consumer Home UI is implemented yet.

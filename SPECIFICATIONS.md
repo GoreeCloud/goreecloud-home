@@ -1,52 +1,40 @@
 # GoreeCloud Home — Specifications
 
-## Document status
+## Current checkpoint
 
 - Product: GoreeCloud Home
-- Short name: Home
-- Repository: GoreeCloud/goreecloud-home
-- Version: 0.1.0-dev.3
+- Version: 0.1.0-dev.4
 - Lifecycle: Development
-- Development model: Original GoreeCloud-controlled software
 - Platform Contract: 0.2
-- Current implementation claim: durable Home Core, state contracts and adapter-boundary foundation only
+- Conformance: Nonconformant
+- Implementation boundary: local Home Core plus bounded companion automation engine
 
-## Purpose and architecture
+## Architecture
 
-GoreeCloud Home is the native local-first GoreeCloud smart-home platform. Complete third-party smart-home applications may inform interoperability objectives but must not become Home's product-defining architecture, state model, automation model, UI or security boundary.
-
-Home Core is the authoritative local domain service. It owns Home/Room/Device relationships, protocol-neutral capabilities, desired/reported state, device availability, adapter registration/lifecycle, versioned persistence and the local event journal. GoreeCloud Mesh may later exchange cross-product events but is not the authority for local state or future safety-relevant automation.
+Home Core owns the local Home/Room/Device domain, protocol-neutral capabilities, desired/reported state, device availability, adapter lifecycle, versioned SQLite state and durable event journal. `HomeAutomationEngine` attaches to the same local SQLite authority/journal and owns scenes, schedules, automation definitions and execution history. Home remains independent of Internet/cloud availability for these local semantics.
 
 ## Persistence
 
-One SQLite authority commits current state and logical events atomically. Schema version 5 contains the event journal, Home/Room/Device and desired/reported state, device availability, optimistic state revisions, and adapter registration/lifecycle. Startup restores and validates persisted state before readiness.
+The proven Home state-schema ledger remains at version 5. The companion automation engine maintains a separate `automation_schema_migrations` ledger at automation schema version 1 inside the same SQLite database. Automation startup restores and validates scenes, schedules and automations against current Home ownership, devices, capabilities and referenced scenes/schedules before use.
 
-Development migrations preserve the original event-only journal and promote pre-registry `0.1.0-dev.2` adapter references into explicit adapter records without claiming a known protocol. These are Development migration tests, not production upgrade/rollback acceptance.
+## Automation Contract v1
 
-## Capability and state contracts
+Machine-readable `contracts/automation.v1.json` defines supported trigger, condition, action and run-status vocabularies plus hard limits. Scenes may contain only desired-state actions. Automations may use manual, reported-state-equals, availability-equals or schedule triggers; desired/reported-state and availability conditions; and `set_desired` or `activate_scene` actions.
 
-`contracts/capabilities.v1.json` defines the initial versioned GoreeCloud capability set and value/write semantics. Desired state and reported state remain distinct.
+A trigger evaluation selects matching enabled automations in stable ID order. Actions execute in definition order. Successful multi-action state mutation and run completion are atomic. On failure, the attempt rolls back desired-state changes and records a failed run separately. One to three whole-run attempts are supported. Conditions that do not match produce a skipped history record.
 
-`contracts/state-revision.v1.json` defines optimistic revisions for desired and reported capability state. New values start at revision 1. Expected revision 0 requires creation; an exact positive expected revision guards mutation; stale expectations raise `state_revision_conflict` and commit neither state nor event. Internal unconditional writes remain possible when no expected revision is supplied, but this does not authorize unconditional future network writes.
+Schedules persist hour/minute/weekdays and a last-fired occurrence key. Evaluation requires an explicit timezone-aware datetime and suppresses duplicate occurrences durably. No autonomous background clock driver exists yet.
 
-`contracts/device-availability.v1.json` defines device availability independently of adapter lifecycle.
+Arbitrary code, shell execution, templates, recursive automation actions and unauthenticated network control are outside Automation Contract v1.
 
-## Adapter boundary
+## HTTP API
 
-`contracts/adapter-lifecycle.v1.json` defines persistent adapter registration and `registered`, `starting`, `ready`, `degraded`, `failed`, and `stopped` lifecycle semantics. Devices that name an adapter require that adapter to be registered. Registration/lifecycle support is infrastructure only and is not evidence that Matter, Thread or any other protocol is implemented.
+The Development network API remains read-only: `/livez`, `/readyz`, and `/api/v1/status`. Internal scene/automation methods are not authorization boundaries and are not exposed as network write routes.
 
-## API and security boundary
+## Protocol and platform boundary
 
-Current HTTP routes are read-only diagnostics: `GET /livez`, `GET /readyz`, and `GET /api/v1/status`. Network device-control writes remain unimplemented. Future writes require GoreeCloud Identity authorization, Wardveil Security enforcement, Privacy Shield review and explicit capability/revision semantics.
+Matter/Thread and all other device protocols remain unimplemented/unvalidated. GoreeCloud Identity, Wardveil Security, Privacy Shield, Everkeep, Manager, Mesh and Glaze UI remain applicable but blocked/unaccepted runtime integrations.
 
-## Integral Platform Systems
+## Next milestone work
 
-Manager, Privacy Shield, Wardveil Security, Everkeep, Glaze UI, GoreeCloud Mesh and GoreeCloud Identity are all applicable and remain blocked/unaccepted runtime integrations at this checkpoint.
-
-## Next major implementation
-
-The next domain milestone is a GoreeCloud-owned persistent scene/automation/schedule model with triggers, conditions, actions, deterministic local execution and execution history. Matter and Thread remain the first protocol priority after the automation and authorization boundaries are sufficiently defined.
-
-## Explicit limitations
-
-No Matter/Thread commissioning or hardware control, Zigbee, Z-Wave, MQTT, BLE, automation execution, production authentication/authorization, remote access, Glaze UI client, platform-system runtime acceptance, backup/restore acceptance, packaging, signing, hardware acceptance, RC, Stable or production qualification is claimed.
+Complete automatic local event routing into the bounded evaluator plus background schedule driving and additional time/presence semantics, then establish Matter/Thread adapter, commissioning credential, subscription and interoperability boundaries. No hardware interoperability, RC, Stable, production, security/privacy acceptance or recovery acceptance is claimed by this checkpoint.

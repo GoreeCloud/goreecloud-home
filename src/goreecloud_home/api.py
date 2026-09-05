@@ -7,6 +7,7 @@ import json
 
 from . import __version__
 from .adapters import ADAPTER_CONTRACT_VERSION
+from .automation import AUTOMATION_CONTRACT_VERSION
 from .core import HomeCore
 from .state_revision import STATE_REVISION_CONTRACT_VERSION
 
@@ -54,6 +55,7 @@ class HomeStatusHandler(BaseHTTPRequestHandler):
                     ],
                     "state_revision_contract_version": STATE_REVISION_CONTRACT_VERSION,
                     "adapter_contract_version": ADAPTER_CONTRACT_VERSION,
+                    "automation_contract_version": AUTOMATION_CONTRACT_VERSION,
                     "control_api": "not-exposed",
                 },
             )

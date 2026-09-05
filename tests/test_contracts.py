@@ -5,6 +5,7 @@ import json
 import unittest
 
 from goreecloud_home.adapters import adapter_contract
+from goreecloud_home.automation import automation_contract
 from goreecloud_home.availability import availability_contract
 from goreecloud_home.capabilities import default_capability_registry
 from goreecloud_home.state_revision import state_revision_contract
@@ -28,6 +29,10 @@ class ContractTests(unittest.TestCase):
     def test_state_revision_contract_file_matches_runtime_contract(self) -> None:
         document = json.loads((ROOT / "contracts/state-revision.v1.json").read_text())
         self.assertEqual(state_revision_contract(), document)
+
+    def test_automation_contract_file_matches_runtime_contract(self) -> None:
+        document = json.loads((ROOT / "contracts/automation.v1.json").read_text())
+        self.assertEqual(automation_contract(), document)
 
 
 if __name__ == "__main__":
