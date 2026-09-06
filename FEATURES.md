@@ -19,12 +19,14 @@
 - Persistent run history with running/succeeded/failed/skipped states.
 - Atomic rollback on failed multi-action attempts and bounded whole-run retries (maximum 3).
 - Hard limits for conditions/actions/runs per trigger to reduce accidental loops or runaway execution.
+- Dependency-free deterministic sunrise/sunset calculation from caller-supplied coordinates, including UTC date rollover and explicit no-event behavior for polar dates without a horizon crossing.
+- Bounded inclusive calendar-date windows requiring timezone-aware evaluation, valid ordering and a maximum 366-day span.
 - Read-only loopback liveness/readiness/status HTTP API with bounded aggregate automation-runtime state.
 - Platform Contract v0.2 declaration and automated validation workflow.
 
 ## Still planned or blocked
 
-- Sunrise/sunset and bounded calendar trigger semantics.
+- Persisted sunrise/sunset and bounded calendar trigger integration, migration-safe storage and duplicate-occurrence semantics using the implemented deterministic time primitives.
 - Presence/geofence triggers through GoreeCloud Location with explicit Privacy Shield policy and acceptance.
 - Exact crash-deduplicated automation delivery for future non-idempotent action families.
 - Matter/Thread, LAN, MQTT, Zigbee, Z-Wave and BLE protocol adapters and physical-device interoperability.
